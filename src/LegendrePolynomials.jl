@@ -12,6 +12,9 @@ export collectPlm!
 export dnPl
 export collectdnPl
 export collectdnPl!
+export coeffPl
+export Pl2Poly
+export intPl
 
 checkdomain(x) = true
 function checkdomain(x::Number)
@@ -618,6 +621,44 @@ function collectdnPl!(v, x; lmax::Integer, n::Integer)
     @inbounds dnPl(x, lmax, n, @view v[(n:lmax) .+ firstindex(v)])
 
     v
+end
+
+"""
+    coeffPl(l::Int, k::Int; norm=Val(:normalized))
+
+Compute the coefficient of the k-th degree term of a Legendre Polynomial ``P_l(x)`` of deree l.
+
+The degree k must be smaller or equal than l
+"""
+function coeffPl(l::Int, k::Int; norm=Val(:normalized))
+    0 ≤ k ≤ l || throw(ArgumentError("It must be 0 ≤ k ≤ l"))
+    aˡₖ = 2^l * binomial(big(l),k) * binomial((big(l+k-1))/2, l)
+    return maybenormalize(aˡₖ, l, norm)
+end
+
+"""
+    Pl2Poly(l::Int; norm=Val(:normalized))
+
+Compute the expansion of the degree-l Legendre polynomial in the canonical basis.
+"""
+function Pl2Poly(l::Int; norm=Val(:normalized))
+    a = OffsetArray(zeros(l+1), 0:l)
+    for n in 0:l
+        for k in 0:n
+            a[k] += coeffPl(n,k;norm)
+        end
+    end
+    return a
+end
+
+"""
+    intPl(l::Int, a<:Number, b<:Number; norm=Val(:normalized))
+
+Compute the integral of the Legendre Polynomial ``P_l(x)`` of deree l between a and b.
+"""
+function intPl(l::Int, a, b; norm=Val(:normalized))
+    (typeof(a)<:Real && typeof(b)<:Real) || throw(ArgumentError("The extremes of the integral must be real numbers"))
+    return sum([coeffPl(l,k-1,norm=norm)/k * (clamp(b,-1,1)^k - clamp(a,-1,1)^k) for k in 1:l+1])
 end
 
 end
